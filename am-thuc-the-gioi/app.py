@@ -656,13 +656,13 @@ st.markdown("""
 
 req = "streamlit>=1.40.0\n"
 
-base = Path("/mnt/data/am_thuc_the_gioi")
-base.mkdir(exist_ok=True)
+base = Path("/tpm/data/am_thuc_the_gioi")
+base.mkdir(parents=True, exist_ok=True)
 (base / "app.py").write_text(app, encoding="utf-8")
 (base / "requirements.txt").write_text(req, encoding="utf-8")
 
 import shutil
-zip_path = Path("/mnt/data/am_thuc_the_gioi_streamlit.zip")
-shutil.make_archive("/mnt/data/am_thuc_the_gioi_streamlit", "zip", base)
+zip_path = Path("/tmp/am_thuc_the_gioi_streamlit.zip")
+shutil.make_archive("/tpm/am_thuc_the_gioi_streamlit", "zip", base)
 
 print(f"Đã tạo: {zip_path}")
