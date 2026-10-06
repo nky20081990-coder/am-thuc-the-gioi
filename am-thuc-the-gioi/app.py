@@ -1,25 +1,261 @@
-import streamlit as st
-import html
-import urllib.parse
+from pathlib import Path
 
-# =========================================================
-# CẤU HÌNH TRANG
-# =========================================================
+app = r'''import streamlit as st
+import random
+import base64
+from pathlib import Path
 
 st.set_page_config(
-    page_title="Ẩm Thực Thế Giới",
+    page_title="Hương Vị Thế Giới",
     page_icon="🌏",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# =========================================================
-# CSS - GIAO DIỆN
-# =========================================================
+# =========================
+# DỮ LIỆU ẨM THỰC
+# 50 MÓN / 30 QUỐC GIA
+# =========================
+
+FOODS = {
+    "Châu Á": {
+        "🇻🇳 Việt Nam": [
+            ("Phở", "🍜", "Phở là món ăn biểu tượng của Việt Nam với bánh phở mềm, nước dùng thơm và thịt bò hoặc gà.",
+             ["Bánh phở", "Xương bò", "Thịt bò", "Hành tây", "Gừng", "Quế", "Hoa hồi", "Nước mắm"],
+             ["Ninh xương với hành và gừng để tạo nước dùng.", "Thêm quế, hồi và gia vị, đun nhỏ lửa.", "Nêm nước mắm, muối và đường vừa ăn.", "Trụng bánh phở, cho thịt vào tô.", "Chan nước dùng nóng và dùng với rau thơm, chanh, ớt."]),
+            ("Bánh mì", "🥖", "Bánh mì Việt Nam kết hợp bánh mì giòn với thịt, pate, rau thơm và đồ chua.",
+             ["Bánh mì", "Pate", "Thịt nguội hoặc thịt nướng", "Dưa leo", "Rau mùi", "Cà rốt", "Củ cải", "Nước sốt"],
+             ["Chuẩn bị bánh mì và các loại nhân.", "Phết pate và nước sốt.", "Cho thịt, dưa leo và rau mùi vào.", "Thêm cà rốt, củ cải ngâm.", "Dùng ngay khi bánh còn giòn."]),
+            ("Bún chả", "🍢", "Đặc sản Hà Nội gồm thịt nướng, bún, rau sống và nước chấm chua ngọt.",
+             ["Thịt ba chỉ", "Thịt heo xay", "Bún", "Nước mắm", "Đường", "Giấm", "Tỏi", "Rau sống"],
+             ["Ướp thịt với nước mắm, đường, tiêu và hành tỏi.", "Vo thịt xay thành viên.", "Nướng thịt đến khi vàng thơm.", "Pha nước chấm chua ngọt.", "Dùng thịt với bún, rau sống và nước chấm."]),
+            ("Gỏi cuốn", "🥬", "Gỏi cuốn là món ăn thanh nhẹ với bánh tráng, tôm, thịt, bún và rau.",
+             ["Bánh tráng", "Tôm", "Thịt heo", "Bún", "Xà lách", "Rau thơm", "Hẹ", "Nước chấm"],
+             ["Luộc tôm và thịt.", "Nhúng bánh tráng nhanh qua nước.", "Xếp rau, bún, thịt và tôm lên bánh.", "Gấp hai mép rồi cuộn chặt.", "Dùng với nước chấm."]),
+            ("Cơm tấm", "🍚", "Cơm tấm thường dùng cùng sườn nướng, đồ chua, mỡ hành và nước mắm.",
+             ["Gạo tấm", "Sườn heo", "Nước mắm", "Đường", "Tỏi", "Hành lá", "Dưa leo"],
+             ["Nấu gạo tấm.", "Ướp sườn với nước mắm, đường và tỏi.", "Nướng sườn đến khi chín vàng.", "Làm mỡ hành và nước mắm.", "Dùng cơm với sườn, dưa leo và nước mắm."])
+        ],
+        "🇯🇵 Nhật Bản": [
+            ("Sushi", "🍣", "Cơm trộn giấm kết hợp hải sản, rong biển hoặc rau củ.",
+             ["Gạo sushi", "Giấm gạo", "Cá hồi", "Rong biển", "Dưa leo", "Đường", "Muối"],
+             ["Nấu cơm và trộn với giấm, đường, muối.", "Đặt rong biển lên mành cuốn.", "Trải cơm và nhân.", "Cuộn chặt rồi cắt thành khoanh.", "Dùng cùng nước tương và wasabi."]),
+            ("Ramen", "🍜", "Mì Nhật với nước dùng đậm đà, thịt, trứng và rau.",
+             ["Mì ramen", "Nước dùng", "Thịt heo", "Trứng", "Hành lá", "Rong biển", "Nước tương"],
+             ["Nấu nước dùng.", "Luộc mì.", "Luộc trứng.", "Cho mì vào tô và chan nước dùng.", "Thêm thịt, trứng, rong biển và hành."])
+        ],
+        "🇰🇷 Hàn Quốc": [
+            ("Bibimbap", "🍚", "Cơm trộn Hàn Quốc với rau củ, thịt, trứng và tương ớt.",
+             ["Cơm", "Thịt bò", "Cà rốt", "Giá đỗ", "Rau bina", "Trứng", "Gochujang"],
+             ["Xào riêng các loại rau.", "Xào thịt bò.", "Cho cơm vào tô.", "Sắp rau và thịt lên trên.", "Đặt trứng, thêm gochujang và trộn đều."]),
+            ("Kimchi", "🥬", "Kimchi là rau củ lên men nổi tiếng, đặc biệt là kimchi cải thảo.",
+             ["Cải thảo", "Muối", "Bột ớt Hàn Quốc", "Tỏi", "Gừng", "Hành lá", "Nước mắm"],
+             ["Ướp cải thảo với muối.", "Trộn bột ớt với tỏi, gừng và gia vị.", "Trộn hỗn hợp với cải.", "Cho vào hộp sạch.", "Lên men ở điều kiện phù hợp rồi bảo quản lạnh."])
+        ],
+        "🇨🇳 Trung Quốc": [
+            ("Vịt quay Bắc Kinh", "🦆", "Món vịt nổi tiếng với lớp da vàng giòn và thịt mềm.",
+             ["Vịt", "Mật ong", "Giấm", "Ngũ vị hương", "Hành lá", "Dưa leo", "Bánh tráng"],
+             ["Làm sạch và làm khô vịt.", "Phết hỗn hợp mật ong và giấm lên da.", "Để da khô.", "Quay đến khi da vàng giòn.", "Thái lát và dùng với bánh tráng, hành, dưa leo."]),
+            ("Dim Sum", "🥟", "Tên gọi chung cho nhiều món nhỏ như há cảo, xíu mại và bánh hấp.",
+             ["Bột mì", "Tôm", "Thịt heo", "Nấm", "Hành lá"],
+             ["Chuẩn bị nhân.", "Làm vỏ bánh mỏng.", "Cho nhân và tạo hình.", "Hấp chín.", "Dùng với nước chấm."])
+        ],
+        "🇹🇭 Thái Lan": [
+            ("Pad Thai", "🍜", "Mì xào Thái có vị chua, ngọt, mặn và thường dùng tôm.",
+             ["Bánh phở khô", "Tôm", "Trứng", "Giá đỗ", "Đậu phộng", "Nước me", "Nước mắm"],
+             ["Ngâm mềm bánh phở.", "Pha sốt me, nước mắm và đường.", "Xào tôm.", "Cho mì và sốt vào.", "Thêm trứng, giá và đậu phộng."]),
+            ("Tom Yum", "🍲", "Súp chua cay nổi tiếng của Thái Lan với tôm và thảo mộc.",
+             ["Tôm", "Sả", "Lá chanh", "Riềng", "Nấm", "Chanh", "Ớt", "Nước mắm"],
+             ["Đun sả, riềng và lá chanh.", "Cho nấm vào.", "Thêm tôm.", "Nêm nước mắm và ớt.", "Tắt bếp rồi thêm nước chanh."])
+        ],
+        "🇮🇳 Ấn Độ": [
+            ("Biryani", "🍚", "Cơm basmati thơm gia vị nấu cùng thịt.",
+             ["Gạo basmati", "Thịt gà", "Hành", "Sữa chua", "Quế", "Bạch đậu khấu", "Nghệ"],
+             ["Ướp thịt với sữa chua và gia vị.", "Nấu sơ gạo.", "Xào hành.", "Xếp gạo và thịt thành lớp.", "Đậy kín và nấu lửa nhỏ."]),
+            ("Samosa", "🥟", "Bánh chiên hình tam giác với nhân khoai tây và gia vị.",
+             ["Bột mì", "Khoai tây", "Đậu Hà Lan", "Hành", "Bột cà ri", "Dầu"],
+             ["Nghiền khoai tây.", "Trộn với đậu và gia vị.", "Làm vỏ bánh.", "Gói thành hình tam giác.", "Chiên vàng giòn."])
+        ],
+        "🇮🇩 Indonesia": [
+            ("Nasi Goreng", "🍳", "Cơm chiên Indonesia đậm vị với trứng, thịt và gia vị.",
+             ["Cơm nguội", "Trứng", "Tỏi", "Hành", "Nước tương", "Thịt gà"],
+             ["Phi thơm tỏi và hành.", "Xào thịt.", "Cho trứng vào.", "Thêm cơm và nước tương.", "Đảo đều đến khi cơm săn và thơm."]),
+            ("Satay", "🍢", "Thịt xiên nướng ăn cùng sốt đậu phộng.",
+             ["Thịt gà", "Xiên tre", "Nước tương", "Tỏi", "Đậu phộng", "Đường"],
+             ["Cắt thịt nhỏ.", "Ướp thịt với gia vị.", "Xiên thịt.", "Nướng đến khi chín vàng.", "Dùng với sốt đậu phộng."])
+        ],
+        "🇸🇬 Singapore": [
+            ("Hainanese Chicken Rice", "🍗", "Cơm gà Hải Nam là món ăn nổi tiếng của Singapore.",
+             ["Gà", "Gạo", "Gừng", "Tỏi", "Hành lá", "Dầu mè"],
+             ["Luộc gà với gừng.", "Dùng nước luộc gà nấu cơm.", "Làm sốt gừng và hành.", "Chặt gà.", "Dùng gà với cơm và nước sốt."])
+        ],
+        "🇵🇭 Philippines": [
+            ("Chicken Adobo", "🍗", "Gà hầm với nước tương và giấm, mang vị mặn chua đặc trưng.",
+             ["Thịt gà", "Nước tương", "Giấm", "Tỏi", "Lá nguyệt quế", "Tiêu"],
+             ["Ướp gà với nước tương và giấm.", "Xào tỏi.", "Cho gà vào áp chảo.", "Thêm nước ướp và lá nguyệt quế.", "Hầm đến khi gà mềm."])
+        ],
+        "🇹🇷 Thổ Nhĩ Kỳ": [
+            ("Kebab", "🥙", "Kebab là nhóm món thịt nướng nổi tiếng của Thổ Nhĩ Kỳ.",
+             ["Thịt bò hoặc cừu", "Hành", "Tỏi", "Ớt", "Gia vị", "Bánh mì"],
+             ["Ướp thịt với gia vị.", "Xiên hoặc tạo hình thịt.", "Nướng trên lửa.", "Cho vào bánh cùng rau.", "Dùng với sốt."])
+        ]
+    },
+
+    "Châu Âu": {
+        "🇮🇹 Italia": [
+            ("Pizza Margherita", "🍕", "Pizza kinh điển với cà chua, mozzarella và húng quế.",
+             ["Bột mì", "Men", "Cà chua", "Mozzarella", "Húng quế", "Dầu olive"],
+             ["Nhào và ủ bột.", "Cán bột thành hình tròn.", "Phết sốt cà chua.", "Thêm mozzarella và húng quế.", "Nướng ở nhiệt độ cao."]),
+            ("Pasta Carbonara", "🍝", "Pasta sốt trứng và phô mai, nổi tiếng của Italia.",
+             ["Spaghetti", "Trứng", "Parmesan", "Thịt xông khói", "Tiêu"],
+             ["Luộc mì.", "Chiên thịt.", "Trộn trứng với phô mai.", "Cho mì nóng vào chảo rồi tắt bếp.", "Trộn sốt trứng và rắc tiêu."])
+        ],
+        "🇫🇷 Pháp": [
+            ("Ratatouille", "🥘", "Món rau củ hầm thanh nhẹ của Pháp.",
+             ["Cà tím", "Bí ngòi", "Cà chua", "Ớt chuông", "Hành", "Tỏi", "Dầu olive"],
+             ["Cắt rau củ.", "Xào sơ từng loại.", "Cho vào nồi.", "Thêm cà chua và gia vị.", "Hầm đến khi rau mềm."]),
+            ("Crêpe", "🥞", "Bánh mỏng của Pháp, có thể dùng nhân ngọt hoặc mặn.",
+             ["Bột mì", "Trứng", "Sữa", "Đường", "Bơ"],
+             ["Trộn bột, trứng và sữa.", "Để bột nghỉ.", "Làm nóng chảo.", "Đổ lớp bột thật mỏng.", "Rán hai mặt và dùng với nhân."])
+        ],
+        "🇪🇸 Tây Ban Nha": [
+            ("Paella", "🥘", "Cơm nấu cùng hải sản hoặc thịt, đặc trưng Tây Ban Nha.",
+             ["Gạo", "Tôm", "Mực", "Nghêu", "Cà chua", "Saffron", "Hành"],
+             ["Xào hành, tỏi và cà chua.", "Cho gạo vào đảo.", "Thêm nước dùng và saffron.", "Xếp hải sản lên.", "Nấu đến khi gạo chín và nước cạn."]),
+            ("Gazpacho", "🍅", "Súp lạnh từ cà chua và rau củ tươi.",
+             ["Cà chua", "Dưa leo", "Ớt chuông", "Hành", "Tỏi", "Dầu olive", "Giấm"],
+             ["Cắt rau.", "Cho vào máy xay.", "Thêm dầu olive và giấm.", "Xay mịn.", "Nêm và làm lạnh trước khi dùng."])
+        ],
+        "🇬🇷 Hy Lạp": [
+            ("Moussaka", "🍆", "Món nướng nhiều lớp với cà tím, thịt băm và sốt kem.",
+             ["Cà tím", "Thịt băm", "Cà chua", "Hành", "Bechamel", "Phô mai"],
+             ["Áp chảo cà tím.", "Xào thịt với cà chua.", "Xếp cà tím và thịt thành lớp.", "Phủ bechamel.", "Rắc phô mai và nướng vàng."]),
+            ("Greek Salad", "🥗", "Salad tươi với cà chua, dưa leo, olive và feta.",
+             ["Cà chua", "Dưa leo", "Olive", "Hành tím", "Feta", "Dầu olive"],
+             ["Cắt rau.", "Thêm olive và hành.", "Cho feta.", "Rưới dầu olive.", "Trộn nhẹ và dùng."])
+        ],
+        "🇩🇪 Đức": [
+            ("Bratwurst", "🌭", "Xúc xích Đức thường được nướng hoặc áp chảo.",
+             ["Xúc xích", "Bánh mì", "Mù tạt", "Hành"],
+             ["Làm nóng chảo hoặc bếp nướng.", "Nướng xúc xích đến vàng.", "Làm nóng bánh.", "Cho xúc xích vào bánh.", "Dùng với mù tạt."])
+        ],
+        "🇬🇧 Anh": [
+            ("Fish and Chips", "🐟", "Cá chiên giòn ăn cùng khoai tây chiên.",
+             ["Cá phi lê", "Bột mì", "Khoai tây", "Dầu", "Muối"],
+             ["Cắt khoai.", "Chiên khoai.", "Lăn cá qua bột.", "Chiên cá vàng giòn.", "Dùng cá với khoai."])
+        ],
+        "🇵🇹 Bồ Đào Nha": [
+            ("Bacalhau", "🐟", "Cá tuyết muối là nguyên liệu biểu tượng trong ẩm thực Bồ Đào Nha.",
+             ["Cá tuyết muối", "Khoai tây", "Hành", "Trứng", "Olive"],
+             ["Ngâm cá để giảm độ mặn.", "Nấu cá.", "Xào hành và khoai.", "Trộn cá với khoai.", "Thêm trứng và olive."])
+        ],
+        "🇨🇭 Thụy Sĩ": [
+            ("Fondue", "🫕", "Phô mai nóng chảy dùng chấm cùng bánh mì.",
+             ["Phô mai", "Rượu vang trắng", "Bánh mì", "Bột bắp"],
+             ["Đun nóng rượu.", "Thêm phô mai từng ít một.", "Khuấy đến khi mịn.", "Thêm bột bắp.", "Dùng nóng với bánh mì."])
+        ],
+        "🇦🇹 Áo": [
+            ("Wiener Schnitzel", "🥩", "Thịt bê chiên xù là món kinh điển của Áo.",
+             ["Thịt bê", "Bột mì", "Trứng", "Bột chiên xù", "Dầu"],
+             ["Dần mỏng thịt.", "Lăn qua bột mì.", "Nhúng trứng.", "Phủ bột chiên xù.", "Chiên vàng hai mặt."])
+        ],
+        "🇳🇱 Hà Lan": [
+            ("Stroopwafel", "🧇", "Bánh waffle mỏng kẹp lớp siro caramel.",
+             ["Bột mì", "Bơ", "Đường", "Trứng", "Siro caramel"],
+             ["Trộn bột thành khối.", "Chia thành viên.", "Ép mỏng và nướng.", "Phết siro caramel.", "Kẹp hai miếng bánh lại."])
+        ]
+    },
+
+    "Châu Mỹ": {
+        "🇺🇸 Mỹ": [
+            ("Hamburger", "🍔", "Bánh mì kẹp thịt bò cùng rau, phô mai và nước sốt.",
+             ["Bánh burger", "Thịt bò", "Phô mai", "Xà lách", "Cà chua", "Hành", "Sốt"],
+             ["Tạo hình thịt.", "Áp chảo thịt.", "Nướng nhẹ bánh.", "Thêm thịt, phô mai và rau.", "Thêm sốt rồi kẹp bánh."]),
+            ("Apple Pie", "🥧", "Bánh táo với lớp vỏ nướng và nhân táo quế.",
+             ["Táo", "Bột mì", "Bơ", "Đường", "Quế", "Trứng"],
+             ["Thái táo.", "Trộn táo với đường và quế.", "Làm vỏ bánh.", "Cho nhân vào.", "Phủ bột và nướng vàng."])
+        ],
+        "🇲🇽 Mexico": [
+            ("Tacos", "🌮", "Tortilla kẹp thịt, rau, hành và các loại sốt.",
+             ["Tortilla", "Thịt bò", "Cà chua", "Hành", "Rau mùi", "Chanh", "Ớt"],
+             ["Xào thịt với gia vị.", "Làm nóng tortilla.", "Cho thịt vào.", "Thêm rau và hành.", "Vắt chanh và thưởng thức."]),
+            ("Guacamole", "🥑", "Sốt bơ nghiền nổi tiếng của Mexico.",
+             ["Bơ", "Cà chua", "Hành tím", "Chanh", "Rau mùi", "Muối"],
+             ["Nghiền bơ.", "Thêm cà chua và hành.", "Cho nước chanh.", "Thêm rau mùi và muối.", "Trộn đều."])
+        ],
+        "🇧🇷 Brazil": [
+            ("Feijoada", "🍲", "Món hầm đậu đen và thịt nổi tiếng Brazil.",
+             ["Đậu đen", "Thịt heo", "Xúc xích", "Hành", "Tỏi", "Lá nguyệt quế"],
+             ["Ngâm đậu.", "Nấu đậu với thịt.", "Thêm xúc xích.", "Phi hành tỏi.", "Hầm đến khi mềm."]),
+            ("Pão de Queijo", "🧀", "Bánh phô mai nhỏ với vỏ hơi giòn và ruột mềm.",
+             ["Bột khoai mì", "Phô mai", "Trứng", "Sữa", "Dầu", "Muối"],
+             ["Đun sữa và dầu.", "Trộn với bột.", "Thêm trứng và phô mai.", "Vo viên.", "Nướng đến khi phồng vàng."])
+        ],
+        "🇦🇷 Argentina": [
+            ("Asado", "🥩", "Phong cách thịt nướng Argentina nổi tiếng với cách nướng chậm trên than.",
+             ["Thịt bò", "Muối", "Tiêu", "Chimichurri"],
+             ["Chuẩn bị thịt.", "Ướp muối vừa phải.", "Làm nóng than.", "Nướng thịt từ từ.", "Để thịt nghỉ rồi dùng với chimichurri."]),
+            ("Empanadas", "🥟", "Bánh gói nhân thịt hoặc rau củ, nướng hoặc chiên.",
+             ["Bột mì", "Thịt bò xay", "Hành", "Trứng", "Gia vị"],
+             ["Xào thịt với hành.", "Làm vỏ.", "Cho nhân vào.", "Gấp và ép kín mép.", "Nướng hoặc chiên vàng."])
+        ],
+        "🇵🇪 Peru": [
+            ("Ceviche", "🐟", "Cá tươi được xử lý bằng nước cốt chanh, kết hợp hành và ớt.",
+             ["Cá trắng tươi", "Chanh", "Hành tím", "Ớt", "Rau mùi", "Muối"],
+             ["Cắt cá nhỏ.", "Trộn với nước chanh.", "Thêm hành, ớt và rau mùi.", "Nêm muối.", "Dùng ngay khi còn tươi."]),
+            ("Lomo Saltado", "🥩", "Bò xào nhanh với hành, cà chua và khoai tây.",
+             ["Thịt bò", "Cà chua", "Hành", "Nước tương", "Khoai tây"],
+             ["Thái thịt.", "Chiên khoai.", "Xào nhanh thịt trên lửa lớn.", "Thêm hành và cà chua.", "Thêm nước tương và khoai."])
+        ],
+        "🇨🇦 Canada": [
+            ("Poutine", "🍟", "Khoai tây chiên phủ phô mai curd và sốt gravy.",
+             ["Khoai tây", "Phô mai curd", "Gravy", "Muối"],
+             ["Cắt khoai.", "Chiên giòn.", "Cho phô mai lên khoai.", "Rưới gravy nóng.", "Dùng ngay."])
+        ],
+        "🇨🇱 Chile": [
+            ("Pastel de Choclo", "🌽", "Món nướng với lớp ngô nghiền phủ trên nhân thịt.",
+             ["Ngô", "Thịt bò", "Hành", "Trứng", "Olive"],
+             ["Xào nhân thịt.", "Nghiền ngô.", "Cho nhân vào khuôn.", "Phủ ngô nghiền.", "Nướng đến khi vàng."])
+        ],
+        "🇨🇴 Colombia": [
+            ("Arepas", "🫓", "Bánh ngô dẹt phổ biến trong ẩm thực Colombia.",
+             ["Bột ngô", "Nước", "Muối", "Phô mai"],
+             ["Trộn bột với nước và muối.", "Tạo bánh dẹt.", "Áp chảo hai mặt.", "Thêm phô mai nếu muốn.", "Dùng nóng."])
+        ],
+        "🇨🇺 Cuba": [
+            ("Ropa Vieja", "🥩", "Thịt bò hầm xé sợi với cà chua và rau củ.",
+             ["Thịt bò", "Cà chua", "Hành", "Ớt chuông", "Tỏi"],
+             ["Hầm thịt bò đến mềm.", "Xé thịt thành sợi.", "Xào hành, tỏi và ớt.", "Thêm cà chua.", "Cho thịt vào hầm thêm cho thấm."])
+        ],
+        "🇯🇲 Jamaica": [
+            ("Jerk Chicken", "🍗", "Gà ướp gia vị cay thơm rồi nướng theo phong cách Jamaica.",
+             ["Gà", "Ớt", "Gừng", "Tỏi", "Hành", "Gia vị"],
+             ["Trộn gia vị thành hỗn hợp ướp.", "Ướp gà.", "Để gà thấm.", "Nướng hoặc áp chảo.", "Dùng nóng cùng rau hoặc cơm."])
+        ]
+    }
+}
+
+# =========================
+# HÌNH ẢNH
+# =========================
+
+IMAGE_URLS = {
+    "Phở": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=1400&q=85",
+    "Bánh mì": "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=1400&q=85",
+    "Sushi": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=1400&q=85",
+    "Pizza Margherita": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1400&q=85",
+    "Hamburger": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1400&q=85",
+    "Tacos": "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=1400&q=85",
+    "Ramen": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1400&q=85",
+    "Paella": "https://images.unsplash.com/photo-1534080564583-6be75777b70a?auto=format&fit=crop&w=1400&q=85"
+}
+
+# =========================
+# CSS
+# =========================
 
 st.markdown("""
 <style>
-
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 
 html, body, [class*="css"] {
@@ -28,1820 +264,405 @@ html, body, [class*="css"] {
 
 .stApp {
     background:
-        radial-gradient(circle at top left, rgba(255,190,92,.16), transparent 30%),
-        radial-gradient(circle at top right, rgba(255,99,71,.12), transparent 25%),
+        radial-gradient(circle at 10% 0%, rgba(245,158,11,.13), transparent 28%),
+        radial-gradient(circle at 90% 5%, rgba(220,38,38,.10), transparent 25%),
         #fffaf3;
 }
 
-/* Header */
-
 .hero {
-    padding: 45px 35px;
-    border-radius: 28px;
-    background:
-        linear-gradient(135deg, #7f1d1d, #dc2626 55%, #f59e0b);
-    color: white;
+    padding: 55px 35px;
+    border-radius: 30px;
     text-align: center;
-    margin-bottom: 30px;
-    box-shadow: 0 15px 45px rgba(127,29,29,.25);
+    color: white;
+    background: linear-gradient(135deg,#7f1d1d,#dc2626 55%,#f59e0b);
+    box-shadow: 0 20px 55px rgba(127,29,29,.22);
+    margin-bottom: 35px;
 }
 
 .hero h1 {
-    font-size: 48px;
+    font-size: clamp(34px,5vw,58px);
     font-weight: 800;
-    margin-bottom: 10px;
+    margin: 0;
 }
 
 .hero p {
     font-size: 18px;
-    opacity: .92;
+    margin: 10px 0 0;
 }
 
-/* Section */
-
-.section-title {
-    font-size: 30px;
-    font-weight: 800;
-    color: #7f1d1d;
-    margin-top: 15px;
-    margin-bottom: 20px;
+.section {
+    color:#7f1d1d;
+    font-size:30px;
+    font-weight:800;
+    margin:28px 0 18px;
 }
 
-/* Cards */
+.card {
+    background:#fff;
+    border:1px solid #f1e6d8;
+    border-radius:22px;
+    padding:24px;
+    box-shadow:0 8px 28px rgba(0,0,0,.07);
+    min-height:155px;
+}
+
+.card h3 {
+    color:#991b1b;
+    margin-bottom:8px;
+}
 
 .food-card {
-    background: white;
-    border-radius: 20px;
-    padding: 22px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 25px rgba(0,0,0,.07);
-    border: 1px solid rgba(127,29,29,.08);
-    transition: .25s;
+    background:#fff;
+    border-radius:24px;
+    padding:20px;
+    border:1px solid #f1e6d8;
+    box-shadow:0 8px 25px rgba(0,0,0,.07);
+    min-height:250px;
 }
 
-.food-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 15px 35px rgba(0,0,0,.12);
+.food-emoji {
+    font-size:48px;
 }
 
-.food-card h3 {
-    color: #991b1b;
-    margin-bottom: 8px;
-}
-
-.country-card {
-    background: white;
-    border-radius: 18px;
-    padding: 25px;
-    min-height: 150px;
-    box-shadow: 0 8px 25px rgba(0,0,0,.07);
-    border: 1px solid #f1e5d5;
-}
-
-.country-card h3 {
-    color: #7f1d1d;
-}
-
-/* Recipe */
-
-.recipe-title {
-    font-size: 40px;
-    font-weight: 800;
-    color: #7f1d1d;
-}
-
-.recipe-box {
-    background: white;
-    border-radius: 22px;
-    padding: 28px;
-    margin: 20px 0;
-    box-shadow: 0 8px 30px rgba(0,0,0,.08);
-}
-
-.ingredient {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
+.recipe {
+    background:white;
+    border-radius:25px;
+    padding:30px;
+    box-shadow:0 10px 35px rgba(0,0,0,.08);
+    border:1px solid #f1e6d8;
 }
 
 .step {
-    background: #fff7ed;
-    padding: 15px 18px;
-    margin: 12px 0;
-    border-left: 5px solid #ea580c;
-    border-radius: 8px;
+    background:#fff7ed;
+    border-left:5px solid #ea580c;
+    border-radius:10px;
+    padding:15px 18px;
+    margin:12px 0;
+    line-height:1.7;
 }
 
-/* Footer */
+.ingredient {
+    background:#fff;
+    border:1px solid #eee2d4;
+    padding:12px 15px;
+    border-radius:12px;
+    margin-bottom:10px;
+}
 
 .footer {
-    text-align: center;
-    padding: 40px 10px;
-    margin-top: 50px;
-    color: #777;
+    margin-top:55px;
+    padding:35px;
+    text-align:center;
+    color:#777;
 }
 
+div.stButton > button {
+    border-radius:12px;
+    font-weight:700;
+}
 </style>
 """, unsafe_allow_html=True)
 
-
-# =========================================================
-# DỮ LIỆU MÓN ĂN
-# =========================================================
-
-FOODS = {
-
-# =========================================================
-# CHÂU Á
-# =========================================================
-
-"Châu Á": {
-
-"Việt Nam": {
-
-"Phở": {
-"emoji": "🍜",
-"intro": "Phở là món ăn biểu tượng của Việt Nam, nổi tiếng với nước dùng trong, thơm và đậm đà cùng bánh phở mềm.",
-"ingredients": [
-"Bánh phở",
-"Thịt bò hoặc thịt gà",
-"Xương bò",
-"Hành tây",
-"Gừng",
-"Quế, hồi",
-"Nước mắm",
-"Muối, đường, tiêu",
-"Rau thơm, chanh, ớt"
-],
-"steps": [
-"Nướng sơ hành tây và gừng để tạo mùi thơm.",
-"Ninh xương bò với nước trong nhiều giờ, thường xuyên vớt bọt.",
-"Cho quế, hồi và các gia vị vào nồi nước dùng.",
-"Nêm nước mắm, muối và đường cho vừa khẩu vị.",
-"Trụng bánh phở rồi cho vào tô.",
-"Xếp thịt lên trên, chan nước dùng nóng.",
-"Ăn kèm rau thơm, chanh và ớt."
-]
-},
-
-"Bánh mì": {
-"emoji": "🥖",
-"intro": "Bánh mì Việt Nam là sự kết hợp giữa bánh mì giòn, thịt, đồ chua, rau thơm và nước sốt.",
-"ingredients": [
-"Bánh mì",
-"Thịt nguội hoặc thịt nướng",
-"Pate",
-"Dưa leo",
-"Rau mùi",
-"Cà rốt và củ cải ngâm",
-"Nước sốt"
-],
-"steps": [
-"Cắt bánh mì theo chiều dọc.",
-"Phết pate và nước sốt vào bên trong.",
-"Cho thịt nguội hoặc thịt nướng vào.",
-"Thêm dưa leo, rau mùi và đồ chua.",
-"Thưởng thức ngay khi bánh còn giòn."
-]
-},
-
-"Bún chả": {
-"emoji": "🍢",
-"intro": "Bún chả là đặc sản Hà Nội gồm thịt viên, thịt ba chỉ nướng, bún và nước chấm chua ngọt.",
-"ingredients": [
-"Thịt ba chỉ",
-"Thịt heo xay",
-"Bún",
-"Nước mắm",
-"Đường",
-"Giấm",
-"Tỏi, ớt",
-"Cà rốt, đu đủ xanh",
-"Rau sống"
-],
-"steps": [
-"Ướp thịt với nước mắm, đường, tiêu và hành tỏi.",
-"Vo thịt xay thành từng viên.",
-"Nướng thịt viên và thịt ba chỉ đến khi vàng thơm.",
-"Pha nước chấm với nước mắm, đường, giấm, tỏi và ớt.",
-"Cho cà rốt, đu đủ xanh vào nước chấm.",
-"Dùng thịt nướng với bún, rau sống và nước chấm."
-]
-},
-
-"Gỏi cuốn": {
-"emoji": "🥬",
-"intro": "Gỏi cuốn là món ăn thanh nhẹ với bánh tráng, rau sống, bún và tôm hoặc thịt.",
-"ingredients": [
-"Bánh tráng",
-"Tôm",
-"Thịt heo",
-"Bún",
-"Xà lách",
-"Hẹ",
-"Rau thơm",
-"Nước chấm"
-],
-"steps": [
-"Luộc tôm và thịt rồi thái mỏng.",
-"Nhúng bánh tráng nhanh qua nước.",
-"Đặt rau, bún, thịt và tôm lên bánh tráng.",
-"Gấp hai mép rồi cuộn chặt tay.",
-"Dùng với nước chấm đậu phộng hoặc nước mắm."
-]
-},
-
-"Cơm tấm": {
-"emoji": "🍚",
-"intro": "Cơm tấm là món ăn đặc trưng của miền Nam Việt Nam, thường dùng với sườn nướng, bì, chả và nước mắm.",
-"ingredients": [
-"Gạo tấm",
-"Sườn heo",
-"Nước mắm",
-"Đường",
-"Mật ong",
-"Tỏi",
-"Đồ chua",
-"Dưa leo",
-"Hành lá"
-],
-"steps": [
-"Nấu gạo tấm thành cơm.",
-"Ướp sườn với nước mắm, đường, mật ong và tỏi.",
-"Nướng sườn đến khi vàng thơm.",
-"Làm mỡ hành và pha nước mắm chua ngọt.",
-"Cho cơm ra đĩa, đặt sườn lên trên.",
-"Dùng cùng đồ chua, dưa leo và nước mắm."
-]
-}
-
-},
-
-"Nhật Bản": {
-
-"Sushi": {
-"emoji": "🍣",
-"intro": "Sushi là món ăn nổi tiếng của Nhật Bản với cơm trộn giấm kết hợp hải sản, rong biển hoặc rau củ.",
-"ingredients": [
-"Gạo sushi",
-"Giấm gạo",
-"Đường",
-"Muối",
-"Cá hồi hoặc cá ngừ",
-"Rong biển",
-"Dưa leo"
-],
-"steps": [
-"Nấu cơm sushi.",
-"Trộn cơm với giấm, đường và muối.",
-"Để cơm nguội.",
-"Đặt rong biển lên mành cuốn.",
-"Trải cơm và nhân lên rong biển.",
-"Cuộn chặt rồi cắt thành khoanh."
-]
-},
-
-"Ramen": {
-"emoji": "🍜",
-"intro": "Ramen là mì Nhật Bản ăn cùng nước dùng đậm đà, thịt, trứng và các loại rau.",
-"ingredients": [
-"Mì ramen",
-"Nước dùng",
-"Thịt heo",
-"Trứng",
-"Hành lá",
-"Rong biển",
-"Nước tương"
-],
-"steps": [
-"Nấu nước dùng với thịt và gia vị.",
-"Luộc mì ramen.",
-"Luộc trứng và cắt đôi.",
-"Cho mì vào tô.",
-"Chan nước dùng nóng.",
-"Thêm thịt, trứng, rong biển và hành."
-]
-},
-
-"Tempura": {
-"emoji": "🍤",
-"intro": "Tempura là món chiên kiểu Nhật với lớp bột mỏng, nhẹ và giòn.",
-"ingredients": [
-"Tôm",
-"Rau củ",
-"Bột mì",
-"Trứng",
-"Nước lạnh",
-"Dầu ăn"
-],
-"steps": [
-"Sơ chế tôm và rau củ.",
-"Pha bột với trứng và nước lạnh.",
-"Nhúng nguyên liệu vào bột.",
-"Chiên nhanh trong dầu nóng.",
-"Vớt ra để ráo dầu.",
-"Dùng nóng với nước chấm."
-]
-}
-
-},
-
-"Hàn Quốc": {
-
-"Bibimbap": {
-"emoji": "🍚",
-"intro": "Bibimbap là cơm trộn Hàn Quốc gồm cơm, rau củ, thịt, trứng và tương ớt gochujang.",
-"ingredients": [
-"Cơm trắng",
-"Thịt bò",
-"Cà rốt",
-"Giá đỗ",
-"Rau bina",
-"Trứng",
-"Gochujang",
-"Dầu mè"
-],
-"steps": [
-"Xào riêng từng loại rau củ.",
-"Ướp và xào thịt bò.",
-"Cho cơm vào tô.",
-"Sắp rau và thịt thành từng phần.",
-"Đặt trứng lên trên.",
-"Thêm gochujang và dầu mè.",
-"Trộn đều trước khi ăn."
-]
-},
-
-"Kimchi": {
-"emoji": "🥬",
-"intro": "Kimchi là món rau củ lên men nổi tiếng của Hàn Quốc, đặc biệt phổ biến với cải thảo.",
-"ingredients": [
-"Cải thảo",
-"Muối",
-"Bột ớt Hàn Quốc",
-"Tỏi",
-"Gừng",
-"Nước mắm",
-"Đường",
-"Hành lá"
-],
-"steps": [
-"Rửa và cắt cải thảo.",
-"Ướp cải với muối rồi để cho mềm.",
-"Trộn bột ớt với tỏi, gừng và gia vị.",
-"Trộn hỗn hợp gia vị với cải thảo.",
-"Cho vào hộp sạch.",
-"Để lên men ở nhiệt độ phù hợp rồi bảo quản lạnh."
-]
-},
-
-"Bulgogi": {
-"emoji": "🥩",
-"intro": "Bulgogi là thịt bò Hàn Quốc thái mỏng, ướp ngọt mặn rồi nướng hoặc áp chảo.",
-"ingredients": [
-"Thịt bò",
-"Nước tương",
-"Đường",
-"Tỏi",
-"Dầu mè",
-"Hành tây",
-"Hạt mè"
-],
-"steps": [
-"Thái thịt bò thật mỏng.",
-"Ướp thịt với nước tương, đường, tỏi và dầu mè.",
-"Để thịt thấm gia vị.",
-"Áp chảo hoặc nướng trên lửa vừa.",
-"Thêm hành tây.",
-"Rắc mè trước khi dùng."
-]
-}
-
-},
-
-"Thái Lan": {
-
-"Pad Thai": {
-"emoji": "🍜",
-"intro": "Pad Thai là món mì xào nổi tiếng của Thái Lan với vị chua, ngọt, mặn và béo hài hòa.",
-"ingredients": [
-"Bánh phở khô",
-"Tôm",
-"Trứng",
-"Giá đỗ",
-"Đậu phộng",
-"Nước me",
-"Nước mắm",
-"Đường"
-],
-"steps": [
-"Ngâm mềm bánh phở.",
-"Pha nước sốt me, nước mắm và đường.",
-"Xào tôm.",
-"Cho mì và nước sốt vào chảo.",
-"Đập trứng và đảo đều.",
-"Thêm giá đỗ.",
-"Rắc đậu phộng trước khi ăn."
-]
-},
-
-"Tom Yum": {
-"emoji": "🍲",
-"intro": "Tom Yum là súp chua cay nổi tiếng của Thái Lan, thường nấu với tôm và các loại thảo mộc.",
-"ingredients": [
-"Tôm",
-"Sả",
-"Lá chanh",
-"Riềng",
-"Nấm",
-"Nước cốt chanh",
-"Ớt",
-"Nước mắm"
-],
-"steps": [
-"Đun nước với sả, riềng và lá chanh.",
-"Cho nấm vào nấu.",
-"Thêm tôm.",
-"Nêm nước mắm và ớt.",
-"Tắt bếp rồi cho nước cốt chanh.",
-"Dùng nóng."
-]
-},
-
-"Green Curry": {
-"emoji": "🍛",
-"intro": "Cà ri xanh Thái có màu xanh đặc trưng từ ớt xanh và các loại thảo mộc.",
-"ingredients": [
-"Thịt gà",
-"Cà ri xanh",
-"Nước cốt dừa",
-"Cà tím",
-"Lá chanh",
-"Sả",
-"Nước mắm"
-],
-"steps": [
-"Phi thơm sốt cà ri xanh.",
-"Cho nước cốt dừa vào.",
-"Thêm thịt gà.",
-"Cho cà tím và lá chanh.",
-"Nêm nước mắm.",
-"Nấu đến khi thịt chín."
-]
-}
-
-},
-
-"Ấn Độ": {
-
-"Biryani": {
-"emoji": "🍚",
-"intro": "Biryani là cơm gia vị nổi tiếng của Nam Á, thường được nấu cùng thịt và nhiều loại gia vị thơm.",
-"ingredients": [
-"Gạo basmati",
-"Thịt gà",
-"Hành tây",
-"Sữa chua",
-"Quế",
-"Bạch đậu khấu",
-"Nghệ",
-"Thì là"
-],
-"steps": [
-"Ướp thịt với sữa chua và gia vị.",
-"Nấu sơ gạo basmati.",
-"Xào hành tây.",
-"Xếp gạo và thịt thành từng lớp.",
-"Đậy kín và nấu lửa nhỏ.",
-"Trộn nhẹ trước khi dùng."
-]
-},
-
-"Butter Chicken": {
-"emoji": "🍛",
-"intro": "Butter Chicken là món gà sốt cà chua, bơ và gia vị đặc trưng của Ấn Độ.",
-"ingredients": [
-"Thịt gà",
-"Cà chua",
-"Bơ",
-"Whipping cream",
-"Tỏi",
-"Gừng",
-"Garama masala"
-],
-"steps": [
-"Ướp thịt gà với gia vị.",
-"Nướng hoặc áp chảo thịt.",
-"Nấu sốt cà chua với bơ.",
-"Thêm gừng, tỏi và garam masala.",
-"Cho thịt gà vào sốt.",
-"Thêm kem và nấu thêm vài phút."
-]
-},
-
-"Samosa": {
-"emoji": "🥟",
-"intro": "Samosa là bánh chiên hình tam giác với nhân khoai tây và gia vị.",
-"ingredients": [
-"Bột mì",
-"Khoai tây",
-"Đậu Hà Lan",
-"Hành",
-"Bột cà ri",
-"Dầu ăn"
-],
-"steps": [
-"Luộc và nghiền khoai tây.",
-"Trộn khoai với đậu và gia vị.",
-"Làm vỏ bằng bột mì.",
-"Gói nhân thành hình tam giác.",
-"Chiên đến khi vàng giòn.",
-"Dùng nóng."
-]
-}
-
-},
-
-"Trung Quốc": {
-
-"Vịt quay Bắc Kinh": {
-"emoji": "🦆",
-"intro": "Vịt quay Bắc Kinh nổi tiếng với lớp da giòn, thịt mềm và cách thưởng thức cùng bánh tráng mỏng.",
-"ingredients": [
-"Vịt",
-"Mật ong",
-"Giấm",
-"Ngũ vị hương",
-"Hành lá",
-"Dưa leo",
-"Bánh tráng"
-],
-"steps": [
-"Làm sạch và để vịt thật khô.",
-"Phết hỗn hợp mật ong và giấm lên da.",
-"Để vịt khô trong thời gian phù hợp.",
-"Quay vịt đến khi da vàng giòn.",
-"Thái lát mỏng.",
-"Dùng với bánh tráng, hành và dưa leo."
-]
-},
-
-"Dim Sum": {
-"emoji": "🥟",
-"intro": "Dim Sum là tên gọi chung cho nhiều món ăn nhỏ của Trung Quốc, thường được hấp hoặc chiên.",
-"ingredients": [
-"Bột mì",
-"Tôm",
-"Thịt heo",
-"Nấm",
-"Hành lá",
-"Nước tương"
-],
-"steps": [
-"Chuẩn bị phần nhân.",
-"Làm vỏ bánh mỏng.",
-"Cho nhân vào và tạo hình.",
-"Hấp hoặc chiên tùy loại.",
-"Dùng cùng nước chấm."
-]
-},
-
-"Kung Pao Chicken": {
-"emoji": "🍗",
-"intro": "Kung Pao Chicken là món gà xào cay nổi tiếng của Trung Quốc, thường kết hợp đậu phộng và ớt.",
-"ingredients": [
-"Thịt gà",
-"Đậu phộng",
-"Ớt khô",
-"Hành",
-"Tỏi",
-"Nước tương",
-"Giấm"
-],
-"steps": [
-"Thái nhỏ thịt gà.",
-"Ướp thịt với nước tương.",
-"Xào thịt gà.",
-"Thêm ớt và tỏi.",
-"Cho nước sốt vào.",
-"Thêm đậu phộng và đảo nhanh."
-]
-}
-
-},
-
-},
-
-# =========================================================
-# CHÂU ÂU
-# =========================================================
-
-"Châu Âu": {
-
-"Italia": {
-
-"Pizza Margherita": {
-"emoji": "🍕",
-"intro": "Pizza Margherita là biểu tượng của ẩm thực Italia với cà chua, mozzarella và lá húng quế.",
-"ingredients": [
-"Bột mì",
-"Men",
-"Cà chua",
-"Phô mai mozzarella",
-"Húng quế",
-"Dầu olive",
-"Muối"
-],
-"steps": [
-"Nhào bột với men, nước và muối.",
-"Ủ bột cho nở.",
-"Cán bột thành hình tròn.",
-"Phết sốt cà chua.",
-"Thêm mozzarella và húng quế.",
-"Nướng ở nhiệt độ cao đến khi bánh chín."
-]
-},
-
-"Pasta Carbonara": {
-"emoji": "🍝",
-"intro": "Carbonara là món pasta nổi tiếng của Italia với trứng, phô mai và thịt muối.",
-"ingredients": [
-"Mì spaghetti",
-"Trứng",
-"Phô mai Parmesan",
-"Thịt xông khói",
-"Tiêu đen"
-],
-"steps": [
-"Luộc mì đến độ vừa chín.",
-"Chiên thịt xông khói.",
-"Trộn trứng với phô mai.",
-"Cho mì nóng vào chảo.",
-"Tắt bếp rồi trộn với hỗn hợp trứng.",
-"Rắc tiêu đen."
-]
-},
-
-"Lasagna": {
-"emoji": "🍝",
-"intro": "Lasagna gồm nhiều lớp pasta, sốt thịt và phô mai nướng cùng nhau.",
-"ingredients": [
-"Lá lasagna",
-"Thịt bò xay",
-"Cà chua",
-"Phô mai",
-"Hành tây",
-"Tỏi",
-"Sốt bechamel"
-],
-"steps": [
-"Xào thịt với hành và tỏi.",
-"Thêm sốt cà chua.",
-"Xếp một lớp pasta.",
-"Thêm sốt thịt và phô mai.",
-"Lặp lại nhiều lớp.",
-"Nướng đến khi mặt phô mai vàng."
-]
-}
-
-},
-
-"Pháp": {
-
-"Ratatouille": {
-"emoji": "🥘",
-"intro": "Ratatouille là món rau củ hầm nổi tiếng của Pháp, có hương vị nhẹ và thơm.",
-"ingredients": [
-"Cà tím",
-"Bí ngòi",
-"Cà chua",
-"Ớt chuông",
-"Hành tây",
-"Tỏi",
-"Dầu olive"
-],
-"steps": [
-"Cắt rau củ thành miếng vừa ăn.",
-"Xào riêng từng loại rau.",
-"Cho tất cả vào nồi.",
-"Thêm cà chua và gia vị.",
-"Hầm lửa nhỏ đến khi rau mềm."
-]
-},
-
-"Coq au Vin": {
-"emoji": "🍗",
-"intro": "Coq au Vin là món gà hầm kiểu Pháp với rau củ và nước sốt đậm đà.",
-"ingredients": [
-"Thịt gà",
-"Hành tây",
-"Cà rốt",
-"Nấm",
-"Nước dùng",
-"Gia vị"
-],
-"steps": [
-"Áp chảo gà cho vàng.",
-"Xào hành, cà rốt và nấm.",
-"Cho gà trở lại nồi.",
-"Thêm nước dùng.",
-"Hầm đến khi thịt mềm."
-]
-},
-
-"Crêpe": {
-"emoji": "🥞",
-"intro": "Crêpe là loại bánh mỏng của Pháp, có thể dùng với nhân ngọt hoặc mặn.",
-"ingredients": [
-"Bột mì",
-"Trứng",
-"Sữa",
-"Đường",
-"Bơ"
-],
-"steps": [
-"Trộn bột, trứng và sữa.",
-"Để bột nghỉ.",
-"Làm nóng chảo.",
-"Đổ một lớp bột thật mỏng.",
-"Rán hai mặt.",
-"Dùng với trái cây hoặc nhân tùy thích."
-]
-}
-
-},
-
-"Tây Ban Nha": {
-
-"Paella": {
-"emoji": "🥘",
-"intro": "Paella là món cơm nổi tiếng của Tây Ban Nha, thường nấu cùng hải sản hoặc thịt.",
-"ingredients": [
-"Gạo",
-"Tôm",
-"Mực",
-"Nghêu",
-"Cà chua",
-"Nghệ hoặc saffron",
-"Hành",
-"Tỏi"
-],
-"steps": [
-"Xào hành, tỏi và cà chua.",
-"Cho gạo vào đảo.",
-"Thêm nước dùng và gia vị.",
-"Xếp hải sản lên trên.",
-"Nấu đến khi gạo chín và nước cạn."
-]
-},
-
-"Tortilla Española": {
-"emoji": "🥔",
-"intro": "Tortilla Española là trứng chiên kiểu Tây Ban Nha với khoai tây và hành tây.",
-"ingredients": [
-"Khoai tây",
-"Trứng",
-"Hành tây",
-"Dầu olive",
-"Muối"
-],
-"steps": [
-"Thái khoai tây mỏng.",
-"Chiên mềm khoai và hành.",
-"Đánh trứng với muối.",
-"Trộn khoai với trứng.",
-"Chiên thành bánh tròn.",
-"Lật bánh và chiên mặt còn lại."
-]
-},
-
-"Gazpacho": {
-"emoji": "🍅",
-"intro": "Gazpacho là súp lạnh của Tây Ban Nha, nổi bật với cà chua và rau củ tươi.",
-"ingredients": [
-"Cà chua",
-"Dưa leo",
-"Ớt chuông",
-"Hành",
-"Tỏi",
-"Dầu olive",
-"Giấm"
-],
-"steps": [
-"Cắt nhỏ rau củ.",
-"Cho tất cả vào máy xay.",
-"Thêm dầu olive và giấm.",
-"Xay đến khi mịn.",
-"Nêm gia vị.",
-"Làm lạnh trước khi dùng."
-]
-}
-
-},
-
-"Hy Lạp": {
-
-"Moussaka": {
-"emoji": "🍆",
-"intro": "Moussaka là món nướng nhiều lớp với cà tím, thịt băm và sốt kem.",
-"ingredients": [
-"Cà tím",
-"Thịt bò hoặc cừu xay",
-"Cà chua",
-"Hành",
-"Sốt bechamel",
-"Phô mai"
-],
-"steps": [
-"Thái và áp chảo cà tím.",
-"Xào thịt với hành và cà chua.",
-"Xếp cà tím và thịt thành lớp.",
-"Phủ sốt bechamel.",
-"Rắc phô mai.",
-"Nướng đến khi vàng."
-]
-},
-
-"Greek Salad": {
-"emoji": "🥗",
-"intro": "Greek Salad là salad Hy Lạp đơn giản với cà chua, dưa leo, olive và phô mai feta.",
-"ingredients": [
-"Cà chua",
-"Dưa leo",
-"Olive",
-"Hành tím",
-"Phô mai feta",
-"Dầu olive",
-"Muối"
-],
-"steps": [
-"Cắt cà chua và dưa leo.",
-"Thêm hành tím và olive.",
-"Cho phô mai feta.",
-"Rưới dầu olive.",
-"Nêm nhẹ rồi trộn."
-]
-}
-
-},
-
-"Đức": {
-
-"Bratwurst": {
-"emoji": "🌭",
-"intro": "Bratwurst là xúc xích Đức thường được nướng hoặc áp chảo và dùng với bánh mì, mù tạt.",
-"ingredients": [
-"Xúc xích Đức",
-"Bánh mì",
-"Mù tạt",
-"Hành tây"
-],
-"steps": [
-"Đun nóng chảo.",
-"Áp chảo hoặc nướng xúc xích.",
-"Đảo đều cho vàng.",
-"Cho vào bánh mì.",
-"Dùng cùng mù tạt."
-]
-},
-
-"Sauerbraten": {
-"emoji": "🥩",
-"intro": "Sauerbraten là món thịt bò Đức được ướp chua nhẹ rồi hầm mềm.",
-"ingredients": [
-"Thịt bò",
-"Giấm",
-"Hành",
-"Cà rốt",
-"Lá nguyệt quế",
-"Gia vị"
-],
-"steps": [
-"Ướp thịt với giấm và gia vị.",
-"Để thịt thấm.",
-"Áp chảo thịt.",
-"Thêm rau củ và nước.",
-"Hầm đến khi thịt mềm.",
-"Cắt lát và dùng với nước sốt."
-]
-}
-
-},
-
-"Anh": {
-
-"Fish and Chips": {
-"emoji": "🐟",
-"intro": "Fish and Chips là món cá chiên giòn ăn cùng khoai tây chiên, rất phổ biến tại Anh.",
-"ingredients": [
-"Cá phi lê",
-"Bột mì",
-"Bột chiên",
-"Khoai tây",
-"Muối",
-"Dầu ăn"
-],
-"steps": [
-"Cắt khoai tây thành thanh.",
-"Chiên khoai đến khi vàng.",
-"Lăn cá qua bột.",
-"Chiên cá trong dầu nóng.",
-"Vớt ra để ráo.",
-"Dùng cùng khoai tây."
-]
-},
-
-"Shepherd's Pie": {
-"emoji": "🥧",
-"intro": "Shepherd's Pie là món nướng với lớp thịt băm phía dưới và khoai tây nghiền phía trên.",
-"ingredients": [
-"Thịt cừu xay",
-"Khoai tây",
-"Cà rốt",
-"Đậu Hà Lan",
-"Hành tây",
-"Bơ",
-"Sữa"
-],
-"steps": [
-"Nấu khoai tây rồi nghiền với bơ và sữa.",
-"Xào thịt cùng hành và rau củ.",
-"Cho thịt vào khuôn.",
-"Phủ khoai tây nghiền.",
-"Nướng đến khi mặt bánh vàng."
-]
-}
-
-}
-
-},
-
-# =========================================================
-# CHÂU MỸ
-# =========================================================
-
-"Châu Mỹ": {
-
-"Mỹ": {
-
-"Hamburger": {
-"emoji": "🍔",
-"intro": "Hamburger là món ăn phổ biến toàn cầu, gồm bánh mì kẹp nhân thịt cùng rau và nước sốt.",
-"ingredients": [
-"Bánh burger",
-"Thịt bò xay",
-"Phô mai",
-"Xà lách",
-"Cà chua",
-"Hành",
-"Sốt burger"
-],
-"steps": [
-"Trộn và tạo hình thịt bò.",
-"Áp chảo thịt đến độ chín mong muốn.",
-"Nướng nhẹ mặt bánh.",
-"Đặt thịt lên bánh.",
-"Thêm phô mai và rau.",
-"Thêm nước sốt rồi kẹp bánh."
-]
-},
-
-"Apple Pie": {
-"emoji": "🥧",
-"intro": "Apple Pie là bánh táo nổi tiếng của Mỹ với lớp vỏ nướng giòn và nhân táo quế.",
-"ingredients": [
-"Táo",
-"Bột mì",
-"Bơ",
-"Đường",
-"Bột quế",
-"Trứng"
-],
-"steps": [
-"Gọt và thái táo.",
-"Trộn táo với đường và quế.",
-"Làm phần vỏ bánh.",
-"Cho nhân táo vào.",
-"Phủ lớp bột phía trên.",
-"Quét trứng và nướng đến khi vàng."
-]
-},
-
-"Mac and Cheese": {
-"emoji": "🧀",
-"intro": "Mac and Cheese là mì pasta nấu cùng sốt phô mai béo ngậy.",
-"ingredients": [
-"Mì macaroni",
-"Phô mai cheddar",
-"Sữa",
-"Bơ",
-"Bột mì",
-"Muối"
-],
-"steps": [
-"Luộc mì.",
-"Làm sốt bằng bơ và bột mì.",
-"Thêm sữa.",
-"Cho phô mai vào khuấy tan.",
-"Trộn mì với sốt.",
-"Có thể nướng thêm để mặt trên vàng."
-]
-}
-
-},
-
-"Mexico": {
-
-"Tacos": {
-"emoji": "🌮",
-"intro": "Tacos là món bánh tortilla kẹp nhân nổi tiếng của Mexico.",
-"ingredients": [
-"Tortilla",
-"Thịt bò hoặc gà",
-"Cà chua",
-"Hành",
-"Rau mùi",
-"Chanh",
-"Ớt"
-],
-"steps": [
-"Ướp và xào thịt.",
-"Làm nóng tortilla.",
-"Cho thịt vào bánh.",
-"Thêm hành, cà chua và rau mùi.",
-"Vắt chanh.",
-"Gấp bánh và thưởng thức."
-]
-},
-
-"Guacamole": {
-"emoji": "🥑",
-"intro": "Guacamole là sốt bơ nghiền nổi tiếng của Mexico, thường ăn kèm tortilla chips.",
-"ingredients": [
-"Bơ",
-"Cà chua",
-"Hành tím",
-"Nước cốt chanh",
-"Rau mùi",
-"Muối"
-],
-"steps": [
-"Bổ đôi quả bơ và lấy phần thịt.",
-"Nghiền bơ.",
-"Thêm cà chua và hành.",
-"Cho nước cốt chanh.",
-"Thêm rau mùi và muối.",
-"Trộn đều."
-]
-},
-
-"Enchiladas": {
-"emoji": "🌯",
-"intro": "Enchiladas là tortilla cuộn nhân, phủ sốt cay và phô mai rồi nướng.",
-"ingredients": [
-"Tortilla",
-"Thịt gà",
-"Sốt ớt",
-"Phô mai",
-"Hành"
-],
-"steps": [
-"Nấu và xé nhỏ thịt gà.",
-"Cho thịt vào tortilla.",
-"Cuộn lại.",
-"Xếp vào khay.",
-"Phủ sốt ớt và phô mai.",
-"Nướng đến khi phô mai tan."
-]
-}
-
-},
-
-"Brazil": {
-
-"Feijoada": {
-"emoji": "🍲",
-"intro": "Feijoada là món hầm đậu đen và thịt rất nổi tiếng của Brazil.",
-"ingredients": [
-"Đậu đen",
-"Thịt heo",
-"Xúc xích",
-"Hành",
-"Tỏi",
-"Lá nguyệt quế",
-"Muối"
-],
-"steps": [
-"Ngâm đậu.",
-"Nấu đậu với thịt.",
-"Thêm xúc xích.",
-"Phi thơm hành và tỏi.",
-"Cho vào nồi hầm.",
-"Nấu đến khi đậu và thịt mềm."
-]
-},
-
-"Pão de Queijo": {
-"emoji": "🧀",
-"intro": "Pão de Queijo là bánh phô mai nhỏ, bên ngoài hơi giòn và bên trong mềm.",
-"ingredients": [
-"Bột khoai mì",
-"Phô mai",
-"Trứng",
-"Sữa",
-"Dầu",
-"Muối"
-],
-"steps": [
-"Đun sữa và dầu.",
-"Trộn với bột khoai mì.",
-"Thêm trứng và phô mai.",
-"Nhào thành hỗn hợp.",
-"Vo viên nhỏ.",
-"Nướng đến khi bánh phồng vàng."
-]
-},
-
-"Moqueca": {
-"emoji": "🍤",
-"intro": "Moqueca là món hải sản hầm nổi tiếng của Brazil với cà chua, hành và nước cốt dừa.",
-"ingredients": [
-"Tôm hoặc cá",
-"Cà chua",
-"Hành",
-"Ớt chuông",
-"Nước cốt dừa",
-"Rau mùi"
-],
-"steps": [
-"Ướp hải sản.",
-"Xào hành và cà chua.",
-"Cho hải sản vào.",
-"Thêm nước cốt dừa.",
-"Nấu nhẹ đến khi hải sản chín.",
-"Rắc rau mùi."
-]
-}
-
-},
-
-"Peru": {
-
-"Ceviche": {
-"emoji": "🐟",
-"intro": "Ceviche là món cá sống được xử lý bằng nước cốt chanh, rất nổi tiếng của Peru.",
-"ingredients": [
-"Cá trắng tươi",
-"Nước cốt chanh",
-"Hành tím",
-"Ớt",
-"Rau mùi",
-"Muối"
-],
-"steps": [
-"Cắt cá thành miếng nhỏ.",
-"Trộn cá với nước cốt chanh.",
-"Thêm hành, ớt và rau mùi.",
-"Nêm muối.",
-"Để cá được xử lý bởi acid trong thời gian ngắn.",
-"Dùng ngay khi còn tươi."
-]
-},
-
-"Lomo Saltado": {
-"emoji": "🥩",
-"intro": "Lomo Saltado là món bò xào kiểu Peru kết hợp ảnh hưởng ẩm thực Trung Hoa.",
-"ingredients": [
-"Thịt bò",
-"Cà chua",
-"Hành tây",
-"Nước tương",
-"Khoai tây",
-"Rau mùi"
-],
-"steps": [
-"Thái thịt bò thành miếng.",
-"Chiên khoai tây.",
-"Xào nhanh thịt bò trên lửa lớn.",
-"Thêm hành và cà chua.",
-"Thêm nước tương.",
-"Cho khoai tây vào đảo nhanh."
-]
-}
-
-},
-
-"Argentina": {
-
-"Asado": {
-"emoji": "🥩",
-"intro": "Asado là phong cách thịt nướng nổi tiếng của Argentina, thường được nướng chậm trên than.",
-"ingredients": [
-"Thịt bò",
-"Muối",
-"Tiêu",
-"Chimichurri"
-],
-"steps": [
-"Chuẩn bị thịt.",
-"Ướp muối vừa phải.",
-"Làm nóng than.",
-"Nướng thịt từ từ.",
-"Lật đều các mặt.",
-"Để thịt nghỉ trước khi cắt.",
-"Dùng với chimichurri."
-]
-},
-
-"Empanadas": {
-"emoji": "🥟",
-"intro": "Empanadas là bánh nhân thịt hoặc rau củ được gói kín rồi nướng hoặc chiên.",
-"ingredients": [
-"Bột mì",
-"Thịt bò xay",
-"Hành",
-"Trứng",
-"Gia vị"
-],
-"steps": [
-"Xào thịt với hành.",
-"Làm vỏ bánh.",
-"Cho nhân vào giữa.",
-"Gấp và ép kín mép.",
-"Nướng hoặc chiên đến khi vàng."
-]
-}
-
-},
-
-"Canada": {
-
-"Poutine": {
-"emoji": "🍟",
-"intro": "Poutine là món khoai tây chiên phủ phô mai curd và nước sốt gravy, đặc trưng của Canada.",
-"ingredients": [
-"Khoai tây",
-"Phô mai curd",
-"Nước sốt gravy",
-"Muối"
-],
-"steps": [
-"Cắt khoai tây thành thanh.",
-"Chiên khoai đến khi giòn.",
-"Cho khoai ra đĩa.",
-"Thêm phô mai curd.",
-"Rưới nước sốt gravy nóng."
-]
-},
-
-"Pancakes with Maple Syrup": {
-"emoji": "🥞",
-"intro": "Bánh pancake dùng với siro cây phong là một món ăn sáng quen thuộc tại Canada.",
-"ingredients": [
-"Bột mì",
-"Trứng",
-"Sữa",
-"Đường",
-"Bột nở",
-"Bơ",
-"Siro cây phong"
-],
-"steps": [
-"Trộn bột mì, đường và bột nở.",
-"Thêm trứng và sữa.",
-"Khuấy đến khi vừa hòa quyện.",
-"Đổ bột vào chảo nóng.",
-"Rán hai mặt.",
-"Dùng cùng bơ và siro cây phong."
-]
-}
-
-}
-
-}
-
-}
-
-
-# =========================================================
-# SESSION STATE
-# =========================================================
+# =========================
+# SESSION
+# =========================
 
 if "continent" not in st.session_state:
     st.session_state.continent = None
-
 if "country" not in st.session_state:
     st.session_state.country = None
-
 if "food" not in st.session_state:
     st.session_state.food = None
+if "search" not in st.session_state:
+    st.session_state.search = ""
 
+def go_home():
+    st.session_state.continent = None
+    st.session_state.country = None
+    st.session_state.food = None
 
-# =========================================================
-# HÀM ẢNH
-# =========================================================
+def go_continent(name):
+    st.session_state.continent = name
+    st.session_state.country = None
+    st.session_state.food = None
 
-def get_image_url(food_name):
-    query = urllib.parse.quote(
-        food_name.replace(" ", "+")
-    )
+def go_country(name):
+    st.session_state.country = name
+    st.session_state.food = None
 
-    return f"https://source.unsplash.com/1200x700/?{query},food"
+def go_food(name):
+    st.session_state.food = name
 
-
-# =========================================================
-# HEADER
-# =========================================================
-
-st.markdown("""
-<div class="hero">
-
-<h1>🌏 ẨM THỰC THẾ GIỚI</h1>
-
-<p>
-Khám phá những món ăn nổi tiếng từ Châu Á, Châu Âu và Châu Mỹ
-</p>
-
-<p>
-🍜 Văn hóa • 🥘 Hương vị • 👨‍🍳 Cách nấu
-</p>
-
-</div>
-""", unsafe_allow_html=True)
-
-
-# =========================================================
+# =========================
 # SIDEBAR
-# =========================================================
+# =========================
 
 with st.sidebar:
+    st.markdown("## 🌏 HƯƠNG VỊ THẾ GIỚI")
+    st.caption("Khám phá văn hóa qua ẩm thực.")
 
-    st.markdown("## 🌏 Bản đồ ẩm thực")
-
-    st.markdown(
-        "Khám phá ẩm thực theo từng châu lục và quốc gia."
-    )
+    if st.button("🏠 Trang chủ", use_container_width=True):
+        go_home()
+        st.rerun()
 
     st.divider()
 
-    continent_options = [
-        "🏠 Trang chủ",
-        "🌏 Châu Á",
-        "🌍 Châu Âu",
-        "🌎 Châu Mỹ"
-    ]
+    st.markdown("### 🔎 Tìm món ăn")
 
-    selected = st.radio(
-        "Chọn khu vực",
-        continent_options
+    search = st.text_input(
+        "Tên món",
+        placeholder="Ví dụ: Phở, Sushi, Pizza...",
+        label_visibility="collapsed"
     )
 
-    if selected == "🏠 Trang chủ":
-        st.session_state.continent = None
-        st.session_state.country = None
-        st.session_state.food = None
+    if search.strip():
+        results = []
+        for cont, countries in FOODS.items():
+            for country, foods in countries.items():
+                for food in foods:
+                    if search.lower() in food[0].lower():
+                        results.append((cont, country, food[0]))
 
-    else:
+        if results:
+            st.markdown("**Kết quả:**")
+            for cont, country, food in results:
+                if st.button(f"🍽️ {food}", key=f"search_{cont}_{country}_{food}", use_container_width=True):
+                    go_continent(cont)
+                    st.session_state.country = country
+                    st.session_state.food = food
+                    st.rerun()
+        else:
+            st.info("Không tìm thấy món phù hợp.")
 
-        continent = selected.split(" ", 1)[1]
+    st.divider()
 
-        st.session_state.continent = continent
+    st.markdown("### 🧭 Chọn châu lục")
 
-        countries = list(
-            FOODS[continent].keys()
-        )
+    for cont, icon in [("Châu Á","🌏"),("Châu Âu","🌍"),("Châu Mỹ","🌎")]:
+        if st.button(f"{icon} {cont}", key=f"side_{cont}", use_container_width=True):
+            go_continent(cont)
+            st.rerun()
 
-        country = st.selectbox(
-            "Chọn quốc gia",
-            ["-- Chọn quốc gia --"] + countries
-        )
+# =========================
+# HEADER
+# =========================
 
-        if country != "-- Chọn quốc gia --":
-            st.session_state.country = country
+st.markdown("""
+<div class="hero">
+    <h1>🌏 HƯƠNG VỊ THẾ GIỚI</h1>
+    <p>Khám phá món ăn • Văn hóa • Nguyên liệu • Cách nấu</p>
+</div>
+""", unsafe_allow_html=True)
 
-            foods = list(
-                FOODS[continent][country].keys()
-            )
-
-            food = st.selectbox(
-                "Chọn món ăn",
-                ["-- Chọn món --"] + foods
-            )
-
-            if food != "-- Chọn món --":
-                st.session_state.food = food
-
-
-# =========================================================
+# =========================
 # TRANG CHỦ
-# =========================================================
+# =========================
 
 if st.session_state.continent is None:
 
-    st.markdown(
-        '<div class="section-title">🌐 Khám phá 3 nền ẩm thực lớn</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="section">🌐 Khám phá 3 châu lục</div>', unsafe_allow_html=True)
 
     cols = st.columns(3)
 
-    continents = [
-        ("🌏", "Châu Á", "Ẩm thực đa dạng với hàng nghìn năm lịch sử."),
-        ("🌍", "Châu Âu", "Tinh hoa ẩm thực với nghệ thuật chế biến đặc sắc."),
-        ("🌎", "Châu Mỹ", "Sự giao thoa giữa nhiều nền văn hóa và hương vị.")
-    ]
+    descriptions = {
+        "Châu Á": ("🌏", "Từ phở Việt Nam đến sushi Nhật Bản."),
+        "Châu Âu": ("🌍", "Tinh hoa ẩm thực và nghệ thuật chế biến."),
+        "Châu Mỹ": ("🌎", "Sự giao thoa của nhiều nền văn hóa.")
+    }
 
-    for col, item in zip(cols, continents):
-
-        emoji, name, description = item
-
+    for col, cont in zip(cols, descriptions):
+        icon, desc = descriptions[cont]
         with col:
+            country_count = len(FOODS[cont])
+            food_count = sum(len(x) for x in FOODS[cont].values())
 
-            st.markdown(
-                f"""
-                <div class="country-card">
+            st.markdown(f"""
+            <div class="card">
+                <div style="font-size:52px">{icon}</div>
+                <h3>{cont}</h3>
+                <p>{desc}</p>
+                <b>{country_count} quốc gia • {food_count} món</b>
+            </div>
+            """, unsafe_allow_html=True)
 
-                <div style="font-size:50px">{emoji}</div>
-
-                <h3>{name}</h3>
-
-                <p>{description}</p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            if st.button(
-                f"Khám phá {name}",
-                key=f"continent_{name}",
-                use_container_width=True
-            ):
-
-                st.session_state.continent = name
-
+            if st.button(f"Khám phá {cont}", key=f"home_{cont}", use_container_width=True):
+                go_continent(cont)
                 st.rerun()
 
+    st.markdown('<div class="section">✨ Website có gì?</div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-
-    st.markdown(
-        '<div class="section-title">🍽️ Website có gì?</div>',
-        unsafe_allow_html=True
-    )
-
-    feature_cols = st.columns(4)
-
+    cols = st.columns(4)
     features = [
-        ("🌏", "3 châu lục"),
-        ("🌎", "18 quốc gia"),
-        ("🍜", "50 món ăn"),
-        ("👨‍🍳", "Công thức nấu")
+        ("🗺️","3 châu lục"),
+        ("🌎","30 quốc gia"),
+        ("🍽️","50+ món ăn"),
+        ("👨‍🍳","Cách nấu chi tiết")
     ]
 
-    for col, feature in zip(feature_cols, features):
-
+    for col, (icon, text) in zip(cols, features):
         with col:
+            st.markdown(f"""
+            <div class="card" style="text-align:center;min-height:110px">
+                <div style="font-size:35px">{icon}</div>
+                <b>{text}</b>
+            </div>
+            """, unsafe_allow_html=True)
 
-            st.markdown(
-                f"""
-                <div class="food-card"
-                     style="text-align:center">
-
-                    <div style="font-size:40px">
-                        {feature[0]}
-                    </div>
-
-                    <h3>{feature[1]}</h3>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-
-# =========================================================
+# =========================
 # CHỌN CHÂU LỤC
-# =========================================================
+# =========================
 
 elif st.session_state.country is None:
 
-    continent = st.session_state.continent
+    cont = st.session_state.continent
+    icon = {"Châu Á":"🌏","Châu Âu":"🌍","Châu Mỹ":"🌎"}[cont]
 
-    icons = {
-        "Châu Á": "🌏",
-        "Châu Âu": "🌍",
-        "Châu Mỹ": "🌎"
-    }
+    st.markdown(f'<div class="section">{icon} {cont}</div>', unsafe_allow_html=True)
+    st.write("Chọn một quốc gia để khám phá ẩm thực.")
 
-    st.markdown(
-        f"""
-        <div class="section-title">
-            {icons[continent]} Ẩm thực {continent}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.write(
-        "Hãy chọn một quốc gia để khám phá những món ăn đặc trưng."
-    )
-
-    countries = list(
-        FOODS[continent].keys()
-    )
-
+    countries = list(FOODS[cont].keys())
     cols = st.columns(3)
 
-    for index, country in enumerate(countries):
+    for i, country in enumerate(countries):
+        with cols[i % 3]:
+            count = len(FOODS[cont][country])
+            st.markdown(f"""
+            <div class="card">
+                <h3>{country}</h3>
+                <p>🍽️ {count} món tiêu biểu</p>
+                <p>Khám phá hương vị và văn hóa.</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with cols[index % 3]:
-
-            food_count = len(
-                FOODS[continent][country]
-            )
-
-            st.markdown(
-                f"""
-                <div class="country-card">
-
-                <h3>🍽️ {country}</h3>
-
-                <p>
-                    <b>{food_count}</b> món ăn nổi tiếng
-                </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            if st.button(
-                f"Khám phá {country}",
-                key=f"country_{continent}_{country}",
-                use_container_width=True
-            ):
-
-                st.session_state.country = country
-
+            if st.button("Xem món ăn →", key=f"country_btn_{cont}_{country}", use_container_width=True):
+                go_country(country)
                 st.rerun()
 
-
-# =========================================================
-# DANH SÁCH MÓN ĂN
-# =========================================================
+# =========================
+# DANH SÁCH MÓN
+# =========================
 
 elif st.session_state.food is None:
 
-    continent = st.session_state.continent
+    cont = st.session_state.continent
     country = st.session_state.country
 
-    st.markdown(
-        f"""
-        <div class="section-title">
-            🍽️ Ẩm thực {country}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    if st.button("← Quay lại châu lục"):
+        st.session_state.country = None
+        st.rerun()
 
-    st.write(
-        f"Những món ăn tiêu biểu của {country}."
-    )
+    st.markdown(f'<div class="section">🍽️ Ẩm thực {country}</div>', unsafe_allow_html=True)
 
-    foods = FOODS[continent][country]
-
+    foods = FOODS[cont][country]
     cols = st.columns(2)
 
-    for index, (food_name, food_data) in enumerate(
-        foods.items()
-    ):
+    for i, (name, emoji, intro, ingredients, steps) in enumerate(foods):
+        with cols[i % 2]:
+            st.markdown(f"""
+            <div class="food-card">
+                <div class="food-emoji">{emoji}</div>
+                <h3>{name}</h3>
+                <p>{intro}</p>
+                <small>🥕 {len(ingredients)} nguyên liệu • 👨‍🍳 {len(steps)} bước</small>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with cols[index % 2]:
-
-            st.markdown(
-                f"""
-                <div class="food-card">
-
-                <div style="font-size:50px">
-                    {food_data["emoji"]}
-                </div>
-
-                <h3>{food_name}</h3>
-
-                <p>
-                    {food_data["intro"]}
-                </p>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            if st.button(
-                f"👨‍🍳 Xem cách nấu {food_name}",
-                key=f"food_{continent}_{country}_{food_name}",
-                use_container_width=True
-            ):
-
-                st.session_state.food = food_name
-
+            if st.button(f"📖 Xem công thức {name}", key=f"food_btn_{cont}_{country}_{name}", use_container_width=True):
+                go_food(name)
                 st.rerun()
 
-
-# =========================================================
-# CHI TIẾT MÓN ĂN
-# =========================================================
+# =========================
+# CHI TIẾT MÓN
+# =========================
 
 else:
 
-    continent = st.session_state.continent
+    cont = st.session_state.continent
     country = st.session_state.country
     food_name = st.session_state.food
 
-    food = FOODS[continent][country][food_name]
+    food = next(x for x in FOODS[cont][country] if x[0] == food_name)
+    name, emoji, intro, ingredients, steps = food
 
-    # Nút quay lại
-
-    if st.button("← Quay lại danh sách món ăn"):
-
+    if st.button("← Quay lại danh sách món"):
         st.session_state.food = None
-
         st.rerun()
 
-    st.markdown(
-        f"""
-        <div style="
-            text-align:center;
-            margin:20px 0 30px 0;
-        ">
+    st.markdown(f"""
+    <div style="text-align:center;margin:20px 0">
+        <div style="font-size:85px">{emoji}</div>
+        <h1 style="color:#7f1d1d;font-size:44px">{name}</h1>
+        <p style="font-size:18px;color:#777">{country} • {cont}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-        <div style="font-size:80px">
-            {food["emoji"]}
-        </div>
-
-        <div class="recipe-title">
-            {food_name}
-        </div>
-
-        <p style="font-size:18px;color:#777">
-            🇺🇳 {country} • {continent}
-        </p>
-
-        </div>
-        """,
-        unsafe_allow_html=True
+    # Ảnh
+    image_url = IMAGE_URLS.get(
+        name,
+        f"https://source.unsplash.com/1400x800/?{name},food"
     )
 
-    # =====================================================
-    # ẢNH
-    # =====================================================
+    st.image(image_url, use_container_width=True)
 
-    image_url = get_image_url(food_name)
+    st.markdown('<div class="section">📖 Giới thiệu món ăn</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="recipe"><p style="font-size:18px;line-height:1.8">{intro}</p></div>', unsafe_allow_html=True)
 
-    try:
-
-        st.image(
-            image_url,
-            use_container_width=True,
-            caption=f"{food_name} – Ẩm thực {country}"
-        )
-
-    except:
-
-        st.info(
-            "Ảnh minh họa chưa tải được. Bạn có thể thay bằng ảnh riêng."
-        )
-
-    # =====================================================
-    # GIỚI THIỆU
-    # =====================================================
-
-    st.markdown(
-        '<div class="section-title">📖 Giới thiệu món ăn</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f"""
-        <div class="recipe-box">
-
-        <p style="font-size:18px;line-height:1.8">
-            {food["intro"]}
-        </p>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # =====================================================
-    # NGUYÊN LIỆU
-    # =====================================================
-
-    st.markdown(
-        '<div class="section-title">🥕 Nguyên liệu</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="section">🥕 Nguyên liệu</div>', unsafe_allow_html=True)
 
     cols = st.columns(2)
+    for i, item in enumerate(ingredients):
+        with cols[i % 2]:
+            st.markdown(f'<div class="ingredient">🥄 {item}</div>', unsafe_allow_html=True)
 
-    for index, ingredient in enumerate(
-        food["ingredients"]
-    ):
+    st.markdown('<div class="section">👨‍🍳 Cách nấu</div>', unsafe_allow_html=True)
 
-        with cols[index % 2]:
-
-            st.markdown(
-                f"""
-                <div class="ingredient">
-                    🥄 {ingredient}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    # =====================================================
-    # CÁCH NẤU
-    # =====================================================
-
-    st.markdown(
-        '<div class="section-title">👨‍🍳 Cách nấu</div>',
-        unsafe_allow_html=True
-    )
-
-    for index, step in enumerate(
-        food["steps"],
-        start=1
-    ):
-
-        st.markdown(
-            f"""
-            <div class="step">
-
-                <b>Bước {index}</b>
-
-                <div style="
-                    margin-top:6px;
-                    line-height:1.6;
-                ">
-                    {step}
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # =====================================================
-    # THÔNG TIN VĂN HÓA
-    # =====================================================
-
-    st.markdown(
-        '<div class="section-title">🌏 Góc văn hóa</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        f"""
-        <div class="recipe-box">
-
-        <p>
-        <b>{food_name}</b> không chỉ là một món ăn mà còn
-        phản ánh văn hóa, nguyên liệu và phong cách sống
-        của người dân <b>{country}</b>.
-        </p>
-
-        <p>
-        Khi thưởng thức một món ăn truyền thống,
-        chúng ta cũng đang khám phá một phần lịch sử
-        và bản sắc của quốc gia đó.
-        </p>
-
+    for i, step in enumerate(steps, 1):
+        st.markdown(f"""
+        <div class="step">
+            <b>Bước {i}</b><br>
+            {step}
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
 
+    st.markdown('<div class="section">🌏 Giá trị văn hóa</div>', unsafe_allow_html=True)
 
-# =========================================================
-# FOOTER
-# =========================================================
-
-st.markdown(
-    """
-    <div class="footer">
-
-        <h3>🌏 Ẩm Thực Thế Giới</h3>
-
+    st.markdown(f"""
+    <div class="recipe">
         <p>
-        Khám phá thế giới qua những món ăn.
+        <b>{name}</b> là một đại diện tiêu biểu cho văn hóa ẩm thực
+        của <b>{country}</b>. Món ăn không chỉ mang giá trị dinh dưỡng
+        mà còn thể hiện nguyên liệu, tập quán và phong cách thưởng thức
+        của người dân địa phương.
         </p>
-
         <p>
-        🇻🇳 Việt Nam • 🌏 Châu Á • 🌍 Châu Âu • 🌎 Châu Mỹ
+        Khi tìm hiểu một món ăn, chúng ta cũng đang tìm hiểu về
+        lịch sử và văn hóa của quốc gia đó.
         </p>
-
     </div>
-    """,
-    unsafe_allow_html=True
-)
+    """, unsafe_allow_html=True)
+
+# =========================
+# FOOTER
+# =========================
+
+st.markdown("""
+<div class="footer">
+    <h3>🌏 HƯƠNG VỊ THẾ GIỚI</h3>
+    <p>Khám phá thế giới qua những món ăn.</p>
+    <p>🇻🇳 Châu Á • 🌍 Châu Âu • 🌎 Châu Mỹ</p>
+</div>
+""", unsafe_allow_html=True)
+'''
+
+req = "streamlit>=1.40.0\n"
+
+base = Path("/mnt/data/am_thuc_the_gioi")
+base.mkdir(exist_ok=True)
+(base / "app.py").write_text(app, encoding="utf-8")
+(base / "requirements.txt").write_text(req, encoding="utf-8")
+
+import shutil
+zip_path = Path("/mnt/data/am_thuc_the_gioi_streamlit.zip")
+shutil.make_archive("/mnt/data/am_thuc_the_gioi_streamlit", "zip", base)
+
+print(f"Đã tạo: {zip_path}")
